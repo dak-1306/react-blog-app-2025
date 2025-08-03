@@ -1,0 +1,103 @@
+/* Header Component Styles */
+.header {
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.header__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.header__logo h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.header__logo:hover {
+  text-decoration: none;
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.header__nav-link {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.header__nav-link:hover {
+  background-color: #f3f4f6;
+  color: #3b82f6;
+}
+
+.header__nav-link.active {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header__user-name {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.header__user-name:hover {
+  color: #3b82f6;
+}
+
+.header__auth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .header__nav {
+    display: none;
+  }
+
+  .header__logo h1 {
+    font-size: 20px;
+  }
+
+  .header__auth {
+    gap: 8px;
+  }
+}
