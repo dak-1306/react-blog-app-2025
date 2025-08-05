@@ -2,8 +2,8 @@ import axios from "axios";
 
 // Tạo instance axios với cấu hình base
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
-  timeout: 10000,
+  baseURL: "http://localhost:3000/api",
+  timeout: 30000, // Increased from 10000 to 30000 (30 seconds) for multiple image uploads
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,19 +23,36 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor - xử lý lỗi chung
+// Response interceptor - xử lý response và error
 axiosInstance.interceptors.response.use(
   (response) => {
+    // Trả về data trực tiếp thay vì response object
     return response.data;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      // Token hết hạn hoặc không hợp lệ
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+    // Xử lý lỗi HTTP
+    if (error.response) {
+      // Server trả về response với status code lỗi
+      const errorMessage =
+        error.response.data?.error ||
+        error.response.data?.message ||
+        "Có lỗi xảy ra";
+
+      // Xử lý lỗi 401 (Unauthorized)
+      if (error.response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
+
+      return Promise.reject(new Error(errorMessage));
+    } else if (error.request) {
+      // Request được gửi nhưng không có response
+      return Promise.reject(new Error("Không thể kết nối đến server"));
+    } else {
+      // Lỗi khác
+      return Promise.reject(new Error(error.message));
     }
-    return Promise.reject(error.response?.data || error.message);
   }
 );
 
