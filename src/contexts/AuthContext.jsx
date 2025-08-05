@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { useReducer, useEffect, useCallback } from "react";
 import * as authAPI from "../api/auth";
-
-const AuthContext = createContext();
+import { AuthContext } from "./createAuthContext";
 
 // Auth reducer
 const authReducer = (state, action) => {
@@ -64,7 +63,8 @@ export const AuthProvider = ({ children }) => {
       try {
         const user = JSON.parse(userData);
         dispatch({ type: "LOAD_USER", payload: user });
-      } catch (error) {
+      } catch {
+        // Clear invalid data
         localStorage.removeItem("token");
         localStorage.removeItem("user");
       }
@@ -87,6 +87,7 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: "LOGIN_START" });
     try {
       const response = await authAPI.register(userData);
+      dispatch({ type: "LOGIN_SUCCESS", payload: response.user });
       return response;
     } catch (error) {
       dispatch({ type: "LOGIN_FAILURE", payload: error.message });
@@ -104,9 +105,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: "CLEAR_ERROR" });
-  };
+  }, []);
 
   const value = {
     ...state,
@@ -117,12 +118,4 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuthContext = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuthContext must be used within an AuthProvider");
-  }
-  return context;
 };

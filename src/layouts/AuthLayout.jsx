@@ -1,7 +1,7 @@
 import React from "react";
 import "./AuthLayout.css";
 
-const AuthLayout = ({ children, title, subtitle }) => {
+export const AuthLayout = ({ children, title, subtitle }) => {
   return (
     <div className="auth-layout">
       <div className="auth-layout__container">
@@ -20,5 +20,3 @@ const AuthLayout = ({ children, title, subtitle }) => {
     </div>
   );
 };
-
-export default AuthLayout;

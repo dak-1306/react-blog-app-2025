@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { routes } from "./routes";
 import PrivateRoute from "./PrivateRoute";
 import MainLayout from "../layouts/MainLayout";
-import AuthLayout from "../layouts/AuthLayout";
+import { AuthLayout } from "../layouts/AuthLayout";
 
 const AppRouter = () => {
   return (
