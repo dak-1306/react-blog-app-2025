@@ -97,10 +97,25 @@ export const getBlogById = async (req, res) => {
       });
     }
 
-    // Increment view count
-    await executeQuery("UPDATE blogs SET views = views + 1 WHERE id = ?", [id]);
+    // Get blog images
+    const blogImages = await executeQuery(
+      `SELECT id, image_url, image_order, caption, alt_text, is_featured 
+       FROM blog_images 
+       WHERE blog_id = ? 
+       ORDER BY image_order ASC`,
+      [id]
+    );
 
-    res.json(blogs[0]);
+    // Increment view count
+    await executeQuery(
+      "UPDATE blogs SET view_count = view_count + 1 WHERE id = ?",
+      [id]
+    );
+
+    const blog = blogs[0];
+    blog.images = blogImages;
+
+    res.json(blog);
   } catch (error) {
     console.error("Get blog error:", error);
     res.status(500).json({
@@ -122,6 +137,7 @@ export const createBlog = async (req, res) => {
       excerpt = null,
       category_id = 1,
       featured_image = null,
+      images = [], // Array of images
       status = "draft",
     } = req.body;
     const author_id = req.user.id;
@@ -133,6 +149,7 @@ export const createBlog = async (req, res) => {
       excerpt,
       category_id,
       featured_image,
+      images: images.length,
       status,
       author_id,
     });
@@ -152,10 +169,11 @@ export const createBlog = async (req, res) => {
       .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
       .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
 
+    // Insert blog
     const result = await executeQuery(
       `
-      INSERT INTO blogs (title, slug, content, excerpt, author_id, category_id, featured_image, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      INSERT INTO blogs (title, slug, content, excerpt, author_id, category_id, featured_image, images_count, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `,
       [
         title,
@@ -165,14 +183,37 @@ export const createBlog = async (req, res) => {
         author_id,
         category_id,
         featured_image,
+        images.length,
         status,
       ]
     );
 
+    const blogId = result.insertId;
+
+    // Insert multiple images if provided
+    if (images && images.length > 0) {
+      const imageInsertPromises = images.map((image, index) => {
+        return executeQuery(
+          `INSERT INTO blog_images (blog_id, image_url, image_order, caption, alt_text, is_featured, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            blogId,
+            image.url,
+            index,
+            image.caption || null,
+            image.alt || title,
+            index === 0 ? 1 : 0, // First image is featured
+          ]
+        );
+      });
+
+      await Promise.all(imageInsertPromises);
+    }
+
     res.status(201).json({
       message: "Tạo blog thành công",
       blog: {
-        id: result.insertId,
+        id: blogId,
         title,
         slug,
         content,
@@ -180,6 +221,7 @@ export const createBlog = async (req, res) => {
         author_id,
         category_id,
         featured_image,
+        images_count: images.length,
         status,
       },
     });

@@ -12,10 +12,10 @@ function CreateBlogPost() {
   const [category, setCategory] = useState("1"); // Default category
   const [privacy, setPrivacy] = useState("published");
   const [loading, setLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
+  const [images, setImages] = useState([]); // Changed to array for multiple images
   const [showPrivacyDropdown, setShowPrivacyDropdown] = useState(false);
   const [error, setError] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -40,7 +40,7 @@ function CreateBlogPost() {
     e.preventDefault();
 
     // Kiểm tra có ít nhất nội dung hoặc ảnh
-    if (!content.trim() && !imagePreview) {
+    if (!content.trim() && images.length === 0) {
       setError("Vui lòng nhập nội dung hoặc chọn ảnh để đăng bài!");
       return;
     }
@@ -55,7 +55,13 @@ function CreateBlogPost() {
         category_id: parseInt(category),
         status: privacy,
         excerpt: content.trim().substring(0, 150) + "...",
-        featured_image: imagePreview || null,
+        featured_image: images.length > 0 ? images[0].url : null,
+        images: images.map((img, index) => ({
+          url: img.url,
+          caption: img.caption || "",
+          alt: img.alt || title.trim() || "Blog image",
+          order: index,
+        })),
       };
 
       const response = await blogAPI.createBlog(blogData);
@@ -72,13 +78,67 @@ function CreateBlogPost() {
     }
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
+  const handleImageUpload = (files) => {
+    const fileArray = Array.from(files);
+
+    fileArray.forEach((file, index) => {
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const newImage = {
+            id: Date.now() + index, // Temporary ID
+            file: file,
+            url: e.target.result,
+            caption: "",
+            alt: file.name,
+            size: file.size,
+            type: file.type,
+          };
+          setImages((prev) => [...prev, newImage]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const removeImage = (imageId) => {
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const updateImageCaption = (imageId, caption) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === imageId ? { ...img, caption } : img))
+    );
+  };
+
+  const reorderImages = (dragIndex, hoverIndex) => {
+    setImages((prev) => {
+      const dragItem = prev[dragIndex];
+      const newImages = [...prev];
+      newImages.splice(dragIndex, 1);
+      newImages.splice(hoverIndex, 0, dragItem);
+      return newImages;
+    });
+  };
+
+  // Drag and drop handlers
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files);
     }
   };
 
@@ -107,59 +167,83 @@ function CreateBlogPost() {
 
         <div className="form-layout">
           <div className="form-left-column">
-            <div className="image-upload-section">
-              <label htmlFor="image-upload" className="image-upload-label">
-                {imagePreview ? (
-                  <div className="image-preview-container">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="image-preview"
-                    />
-                  </div>
-                ) : (
+            <div
+              className="image-upload-section"
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {images.length === 0 ? (
+                <label
+                  htmlFor="image-upload"
+                  className={`image-upload-label ${
+                    dragActive ? "drag-active" : ""
+                  }`}
+                >
                   <div className="upload-placeholder">
                     <div className="upload-icon">
                       <i className="fas fa-cloud-upload-alt"></i>
                     </div>
-                    <p>Chọn ảnh để tải lên</p>
+                    <p>Kéo thả ảnh vào đây hoặc click để chọn</p>
+                    <p className="upload-hint">Hỗ trợ nhiều ảnh</p>
                   </div>
-                )}
-              </label>
+                </label>
+              ) : (
+                <div className="images-container">
+                  <div className="images-grid">
+                    {images.map((image, index) => (
+                      <div key={image.id} className="image-item">
+                        <div className="image-preview-container">
+                          <img
+                            src={image.url}
+                            alt={image.alt}
+                            className="image-preview"
+                          />
+                          <div className="image-overlay">
+                            <button
+                              type="button"
+                              className="remove-image-btn"
+                              onClick={() => removeImage(image.id)}
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                            {index === 0 && (
+                              <span className="featured-badge">
+                                <i className="fas fa-star"></i> Ảnh đại diện
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Mô tả ảnh (tùy chọn)"
+                          value={image.caption}
+                          onChange={(e) =>
+                            updateImageCaption(image.id, e.target.value)
+                          }
+                          className="image-caption-input"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <label htmlFor="image-upload" className="add-more-images-btn">
+                    <i className="fas fa-plus"></i>
+                    Thêm ảnh
+                  </label>
+                </div>
+              )}
+
               <input
                 id="image-upload"
                 type="file"
                 accept="image/*"
-                onChange={handleImageUpload}
+                multiple
+                onChange={(e) => handleImageUpload(e.target.files)}
                 className="image-input"
               />
             </div>
-
-            {imagePreview && (
-              <div className="image-actions">
-                <button
-                  type="button"
-                  className="change-image-btn"
-                  onClick={() =>
-                    document.getElementById("image-upload").click()
-                  }
-                >
-                  <i className="fas fa-sync-alt"></i>
-                  Đổi ảnh
-                </button>
-                <button
-                  type="button"
-                  className="remove-image-btn"
-                  onClick={() => {
-                    setImagePreview(null);
-                    setImageFile(null);
-                  }}
-                >
-                  <i className="fas fa-trash"></i>
-                  Xóa ảnh
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="form-right-column">
@@ -311,11 +395,11 @@ function CreateBlogPost() {
               <button
                 type="submit"
                 className="post-button"
-                disabled={loading || (!content.trim() && !imagePreview)}
+                disabled={loading || (!content.trim() && images.length === 0)}
                 style={{
                   padding: "12px 24px",
                   backgroundColor:
-                    loading || (!content.trim() && !imagePreview)
+                    loading || (!content.trim() && images.length === 0)
                       ? "#9ca3af"
                       : "#3b82f6",
                   color: "white",
@@ -325,7 +409,7 @@ function CreateBlogPost() {
                   fontWeight: "600",
                   width: "100%",
                   cursor:
-                    loading || (!content.trim() && !imagePreview)
+                    loading || (!content.trim() && images.length === 0)
                       ? "not-allowed"
                       : "pointer",
                 }}

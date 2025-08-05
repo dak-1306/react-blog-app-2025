@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1:3306
--- Thời gian đã tạo: Th8 05, 2025 lúc 10:30 AM
+-- Thời gian đã tạo: Th8 05, 2025 lúc 02:03 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.0.30
 
@@ -34,6 +34,7 @@ CREATE TABLE `blogs` (
   `excerpt` text DEFAULT NULL,
   `content` longtext NOT NULL,
   `featured_image` varchar(500) DEFAULT NULL,
+  `images_count` int(11) DEFAULT 0,
   `status` enum('draft','published','archived') DEFAULT 'draft',
   `is_featured` tinyint(1) DEFAULT 0,
   `view_count` int(11) DEFAULT 0,
@@ -41,6 +42,33 @@ CREATE TABLE `blogs` (
   `author_id` bigint(20) NOT NULL,
   `category_id` bigint(20) DEFAULT NULL,
   `published_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `blogs`
+--
+
+INSERT INTO `blogs` (`id`, `title`, `slug`, `excerpt`, `content`, `featured_image`, `images_count`, `status`, `is_featured`, `view_count`, `reading_time`, `author_id`, `category_id`, `published_at`, `created_at`, `updated_at`) VALUES
+(1, 'usecase', 'usecase', 'mệt...', 'mệt', 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gIoSUNDX1BST0ZJTEUAAQEAAAIYanhsIARAAABtbnRyUkdCIFhZWiAH4wAMAAEAAAAAAABhY3NwQVBQTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLWp4bCACufkBQHM6b/D/A/Tw9worAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtkZXNjAAABCAAAAERjcHJ0AAABTAAAACR3dHB0AAABcAAAABRjaGFkAAABhAAAACxjaWNwAAABsAAAAAxyWFlaAAABvAAAABRnWFlaAAAB0AAAABRiWFlaAAAB5AAAABRyVFJDAAAB+AAAACBnVFJDAAAB+AAAACBiVFJDAAAB+AAAACBtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACYAAAAcAFIARwBCAF8ARAA2ADUAXwBTAFIARwBfAFIAZ', 0, 'published', 0, 0, 0, 11, 1, NULL, '2025-08-05 11:29:44', '2025-08-05 11:29:44');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `blog_images`
+--
+
+CREATE TABLE `blog_images` (
+  `id` bigint(20) NOT NULL,
+  `blog_id` bigint(20) NOT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `image_order` int(11) DEFAULT 0,
+  `caption` varchar(255) DEFAULT NULL,
+  `alt_text` varchar(255) DEFAULT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  `mime_type` varchar(100) DEFAULT NULL,
+  `is_featured` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -245,7 +273,13 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `avatar`, `bio`, `role`, `email_verified_at`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'Admin', 'admin@blogapp.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 'admin', '2025-08-05 08:29:34', 1, '2025-08-05 08:29:34', '2025-08-05 08:29:34'),
 (2, 'John Doe', 'john@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 'user', '2025-08-05 08:29:34', 1, '2025-08-05 08:29:34', '2025-08-05 08:29:34'),
-(3, 'Jane Smith', 'jane@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 'user', '2025-08-05 08:29:34', 1, '2025-08-05 08:29:34', '2025-08-05 08:29:34');
+(3, 'Jane Smith', 'jane@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 'user', '2025-08-05 08:29:34', 1, '2025-08-05 08:29:34', '2025-08-05 08:29:34'),
+(8, 'Hai Dang', 'thd1234@gmail.com', '$2a$12$u7/CW8kK.OC9zl4NxZoPvuL/sp4Rwpr0jveVJs1d.w9CmXEQX4K9i', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:01:46', '2025-08-05 11:01:46'),
+(9, 'Test Register', 'testregister@example.com', '$2a$12$PdRV9c9PvIz/G7iqZgR.2.6KSRLWhkomYckGQ.x3u4qE28MvvB72a', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:03:32', '2025-08-05 11:03:32'),
+(10, 'Test Debug', 'testdebug@example.com', '$2a$12$91pO/Jrme9XUa5EJ/oXXReTY4Drbi7TOHVYXpoSqEC0.iWydZ7guW', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:05:48', '2025-08-05 11:05:48'),
+(11, 'Trần Đăng', 'thd123@gmail.com', '$2a$12$F1kAXsvWXz9Mz7VHkVHGSOXVSYVqCOoxzSkgZgE02rjj7z9.5RJbm', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:06:42', '2025-08-05 11:06:42'),
+(12, 'Test User', 'test@example.com', '$2a$12$M.ahsxR9XYviv6FBg935l.qluDY.bA2EtQH4Pmct9ptfaAqIxnewG', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:18:50', '2025-08-05 11:18:50'),
+(13, 'Test User', 'test2@example.com', '$2a$12$zUei71jc7dMpIIgIqQ.6JuiAaF5a2Rw4WtPi5JDHQOONP.YEgz1fK', NULL, NULL, 'user', NULL, 1, '2025-08-05 11:19:13', '2025-08-05 11:19:13');
 
 --
 -- Chỉ mục cho các bảng đã đổ
@@ -265,6 +299,16 @@ ALTER TABLE `blogs`
   ADD KEY `idx_is_featured` (`is_featured`),
   ADD KEY `idx_created_at` (`created_at`);
 ALTER TABLE `blogs` ADD FULLTEXT KEY `idx_search` (`title`,`excerpt`,`content`);
+
+--
+-- Chỉ mục cho bảng `blog_images`
+--
+ALTER TABLE `blog_images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_blog_id` (`blog_id`),
+  ADD KEY `idx_is_featured` (`is_featured`),
+  ADD KEY `idx_image_order` (`image_order`),
+  ADD KEY `idx_blog_images_blog_order` (`blog_id`,`image_order`);
 
 --
 -- Chỉ mục cho bảng `blog_tags`
@@ -375,6 +419,12 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT cho bảng `blogs`
 --
 ALTER TABLE `blogs`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT cho bảng `blog_images`
+--
+ALTER TABLE `blog_images`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
@@ -435,7 +485,7 @@ ALTER TABLE `tags`
 -- AUTO_INCREMENT cho bảng `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Các ràng buộc cho các bảng đã đổ
@@ -447,6 +497,12 @@ ALTER TABLE `users`
 ALTER TABLE `blogs`
   ADD CONSTRAINT `blogs_ibfk_1` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `blogs_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL;
+
+--
+-- Các ràng buộc cho bảng `blog_images`
+--
+ALTER TABLE `blog_images`
+  ADD CONSTRAINT `fk_blog_images_blog_id` FOREIGN KEY (`blog_id`) REFERENCES `blogs` (`id`) ON DELETE CASCADE;
 
 --
 -- Các ràng buộc cho bảng `blog_tags`
