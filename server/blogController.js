@@ -55,6 +55,33 @@ const upload = multer({
 // Export multer middleware for use in routes
 export const uploadMiddleware = upload.array("images", 10); // Allow up to 10 images
 
+// Avatar upload middleware
+const avatarStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "uploads", "avatars");
+    try {
+      await fs.mkdir(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error);
+    }
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit for avatars
+  },
+  fileFilter: fileFilter,
+});
+
+export const avatarUploadMiddleware = avatarUpload.single("avatar");
+
 // GET /api/blogs - Lấy danh sách blog với phân trang và tìm kiếm
 export const getBlogs = async (req, res) => {
   try {

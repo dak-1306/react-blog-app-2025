@@ -278,3 +278,131 @@ export const authenticateToken = async (req, res, next) => {
     });
   }
 };
+
+// PUT /api/auth/profile - Update user profile
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, bio, location, website } = req.body;
+    const userId = req.user.id;
+
+    // Validation
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({
+        error: "Tên không được để trống",
+      });
+    }
+
+    // Update user profile
+    await executeQuery(
+      `UPDATE users SET 
+       name = ?, 
+       phone = ?, 
+       bio = ?, 
+       location = ?, 
+       website = ?, 
+       updated_at = NOW() 
+       WHERE id = ?`,
+      [
+        name.trim(),
+        phone || null,
+        bio || null,
+        location || null,
+        website || null,
+        userId,
+      ]
+    );
+
+    // Get updated user data
+    const users = await executeQuery(
+      "SELECT id, name, email, phone, bio, location, website, avatar, created_at, updated_at FROM users WHERE id = ?",
+      [userId]
+    );
+
+    res.json({
+      message: "Cập nhật profile thành công",
+      user: users[0],
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({
+      error: "Cập nhật profile thất bại",
+    });
+  }
+};
+
+// POST /api/auth/upload-avatar - Upload avatar
+export const uploadAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Không có file được upload",
+      });
+    }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    // Update user avatar
+    await executeQuery(
+      "UPDATE users SET avatar = ?, updated_at = NOW() WHERE id = ?",
+      [avatarUrl, userId]
+    );
+
+    res.json({
+      message: "Upload avatar thành công",
+      avatarUrl: avatarUrl,
+    });
+  } catch (error) {
+    console.error("Upload avatar error:", error);
+    res.status(500).json({
+      error: "Upload avatar thất bại",
+    });
+  }
+};
+
+// DELETE /api/auth/delete-account - Delete user account
+export const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    if (!password) {
+      return res.status(400).json({
+        error: "Mật khẩu là bắt buộc",
+      });
+    }
+
+    // Get user password
+    const users = await executeQuery(
+      "SELECT password FROM users WHERE id = ?",
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        error: "Người dùng không tồn tại",
+      });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, users[0].password);
+    if (!validPassword) {
+      return res.status(400).json({
+        error: "Mật khẩu không chính xác",
+      });
+    }
+
+    // Delete user data (cascade delete should handle related data)
+    await executeQuery("DELETE FROM users WHERE id = ?", [userId]);
+
+    res.json({
+      message: "Tài khoản đã được xóa thành công",
+    });
+  } catch (error) {
+    console.error("Delete account error:", error);
+    res.status(500).json({
+      error: "Xóa tài khoản thất bại",
+    });
+  }
+};

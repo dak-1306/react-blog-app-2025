@@ -17,6 +17,9 @@ import {
   getCurrentUser,
   changePassword,
   authenticateToken,
+  updateProfile,
+  uploadAvatar,
+  deleteAccount,
 } from "./authController.js";
 
 // Import blog controller
@@ -32,6 +35,7 @@ import {
   uploadImages,
   deleteImage,
   uploadMiddleware,
+  avatarUploadMiddleware,
 } from "./blogController.js";
 
 const app = express();
@@ -90,6 +94,14 @@ app.post("/api/auth/login", login);
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", authenticateToken, getCurrentUser);
 app.put("/api/auth/change-password", authenticateToken, changePassword);
+app.put("/api/auth/profile", authenticateToken, updateProfile);
+app.post(
+  "/api/auth/upload-avatar",
+  authenticateToken,
+  avatarUploadMiddleware,
+  uploadAvatar
+);
+app.delete("/api/auth/delete-account", authenticateToken, deleteAccount);
 
 // Blog endpoints (match với src/api/blog.js)
 app.get("/api/blogs", getBlogs);
@@ -146,6 +158,9 @@ const startServer = async () => {
       console.log("   POST /api/auth/logout          - Đăng xuất");
       console.log("   GET  /api/auth/me              - Lấy thông tin user");
       console.log("   PUT  /api/auth/change-password - Đổi mật khẩu");
+      console.log("   PUT  /api/auth/profile         - Cập nhật profile");
+      console.log("   POST /api/auth/upload-avatar   - Upload avatar");
+      console.log("   DELETE /api/auth/delete-account - Xóa tài khoản");
 
       console.log("\n📝 Blog Endpoints:");
       console.log("   GET    /api/blogs              - Lấy danh sách blog");

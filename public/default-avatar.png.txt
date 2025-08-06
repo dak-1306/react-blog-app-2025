@@ -1,0 +1,2 @@
+/* This file serves as a placeholder for default avatar */
+/* Copy your default-avatar.png to public/ directory */
