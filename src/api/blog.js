@@ -43,7 +43,6 @@ export const deleteBlog = async (id) => {
   const response = await axiosInstance.delete(`/blogs/${id}`);
   return response;
 };
-
 // API upload nhiều hình ảnh
 export const uploadImages = async (files) => {
   try {
@@ -79,6 +78,15 @@ export const deleteUploadedImage = async (filename) => {
 
 // API lấy blog của user hiện tại
 export const getMyBlogs = async (params = {}) => {
+  console.log("🔍 getMyBlogs called with params:", params);
+
+  // Check if token exists
+  const token = localStorage.getItem("token");
+  console.log("🎫 Token exists:", !!token);
+  if (token) {
+    console.log("🎫 Token preview:", token.substring(0, 20) + "...");
+  }
+
   const { page = 1, limit = 10 } = params;
   const response = await axiosInstance.get("/blogs/my-blogs", {
     params: { page, limit },

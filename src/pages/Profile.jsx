@@ -88,10 +88,18 @@ export default function Profile() {
       if (activeTab === "blogs" && isAuthenticated) {
         try {
           setBlogsLoading(true);
+          console.log("🔍 Loading user blogs...");
           const response = await getMyBlogs();
-          setUserBlogs(response.blogs || []);
+          console.log("📊 API Response:", response);
+
+          // Handle different response formats
+          const blogsData = response.blogs || response.data?.blogs || [];
+          console.log("📝 Blogs data:", blogsData);
+
+          setUserBlogs(blogsData);
         } catch (err) {
-          console.error("Error loading user blogs:", err);
+          console.error("❌ Error loading user blogs:", err);
+          setError("Không thể tải danh sách bài viết");
         } finally {
           setBlogsLoading(false);
         }

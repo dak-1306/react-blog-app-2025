@@ -59,6 +59,19 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`\n🌐 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  console.log(
+    "📋 Headers auth:",
+    req.headers.authorization ? "Present" : "Missing"
+  );
+  if (Object.keys(req.query).length > 0) console.log("📋 Query:", req.query);
+  if (Object.keys(req.body || {}).length > 0)
+    console.log("📋 Body keys:", Object.keys(req.body));
+  next();
+});
+
 // Serve static files from uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -105,6 +118,12 @@ app.delete("/api/auth/delete-account", authenticateToken, deleteAccount);
 
 // Blog endpoints (match với src/api/blog.js)
 app.get("/api/blogs", getBlogs);
+// Test endpoint for debugging
+app.get("/api/blogs/test", authenticateToken, (req, res) => {
+  console.log("🧪 Test endpoint hit - user:", req.user);
+  res.json({ message: "Test endpoint works!", user: req.user });
+});
+// Specific routes MUST come before parameterized routes
 app.get("/api/blogs/my-blogs", authenticateToken, getMyBlogs);
 app.get("/api/blogs/:id", getBlogById);
 app.post("/api/blogs", authenticateToken, createBlog);

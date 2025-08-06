@@ -163,7 +163,7 @@ export const getBlogById = async (req, res) => {
       `
       SELECT b.*, u.name as author_name, u.avatar as author_avatar,
              c.name as category_name, c.slug as category_slug,
-             (SELECT COUNT(*) FROM blog_likes WHERE blog_id = b.id) as likes_count,
+             (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as likes_count,
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as comments_count
       FROM blogs b
       LEFT JOIN users u ON b.author_id = u.id
@@ -401,14 +401,22 @@ export const deleteBlog = async (req, res) => {
 // GET /api/blogs/my-blogs - Lấy blog của user hiện tại
 export const getMyBlogs = async (req, res) => {
   try {
+    console.log("🚀 getMyBlogs endpoint hit!");
+    console.log("📋 Query params:", req.query);
+    console.log("👤 User from request:", req.user);
+
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const author_id = req.user.id;
 
+    console.log("🔍 getMyBlogs called for user ID:", author_id);
+    console.log("📊 Pagination:", { page, limit, offset });
+
+    console.log("🔍 Executing blogs query...");
     const blogs = await executeQuery(
       `
       SELECT b.*, c.name as category_name,
-             (SELECT COUNT(*) FROM blog_likes WHERE blog_id = b.id) as likes_count,
+             (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as likes_count,
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as comments_count
       FROM blogs b
       LEFT JOIN categories c ON b.category_id = c.id
@@ -419,14 +427,20 @@ export const getMyBlogs = async (req, res) => {
       [author_id, parseInt(limit), parseInt(offset)]
     );
 
+    console.log("📝 Found blogs:", blogs.length);
+    console.log("📄 Blogs data:", blogs);
+
     // Get total count
+    console.log("🔢 Executing count query...");
     const countResult = await executeQuery(
       "SELECT COUNT(*) as total FROM blogs WHERE author_id = ?",
       [author_id]
     );
     const total = countResult[0].total;
 
-    res.json({
+    console.log("📊 Total blogs for user:", total);
+
+    const responseData = {
       blogs,
       pagination: {
         current_page: parseInt(page),
@@ -434,9 +448,13 @@ export const getMyBlogs = async (req, res) => {
         total,
         total_pages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    console.log("✅ Sending response:", responseData);
+    res.json(responseData);
   } catch (error) {
-    console.error("Get my blogs error:", error);
+    console.error("❌ Get my blogs error:", error);
+    console.error("❌ Error stack:", error.stack);
     res.status(500).json({
       error: "Lấy danh sách blog của bạn thất bại",
     });
@@ -451,21 +469,21 @@ export const toggleLikeBlog = async (req, res) => {
 
     // Check if already liked
     const existingLike = await executeQuery(
-      "SELECT id FROM blog_likes WHERE blog_id = ? AND user_id = ?",
+      "SELECT id FROM likes WHERE blog_id = ? AND user_id = ?",
       [id, user_id]
     );
 
     if (existingLike.length > 0) {
       // Unlike
       await executeQuery(
-        "DELETE FROM blog_likes WHERE blog_id = ? AND user_id = ?",
+        "DELETE FROM likes WHERE blog_id = ? AND user_id = ?",
         [id, user_id]
       );
       res.json({ message: "Đã bỏ thích", liked: false });
     } else {
       // Like
       await executeQuery(
-        "INSERT INTO blog_likes (blog_id, user_id, created_at) VALUES (?, ?, NOW())",
+        "INSERT INTO likes (blog_id, user_id, created_at) VALUES (?, ?, NOW())",
         [id, user_id]
       );
       res.json({ message: "Đã thích", liked: true });
