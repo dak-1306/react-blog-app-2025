@@ -2,6 +2,7 @@
 export const config = {
   // API Configuration
   API_URL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
+  SERVER_URL: import.meta.env.VITE_SERVER_URL || "http://localhost:3000",
 
   // Pagination
   POSTS_PER_PAGE: 12,

@@ -1,257 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import './BlogDetail.css';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getBlogById } from "../../api/blog";
+import { useAuth } from "../../hooks/useAuth";
+import { config } from "../../config";
+import "../../styles/BlogDetail.css";
 
-export default function BlogDetail() {
+const BlogDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState('');
+  const [error, setError] = useState(null);
+  const [showAllImages, setShowAllImages] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [comment, setComment] = useState("");
   const [comments, setComments] = useState([]);
 
-  // Mock data - trong thực tế sẽ fetch từ API
   useEffect(() => {
-    const mockBlog = {
-      id: id,
-      title: "Khám phá vẻ đẹp của React trong năm 2025",
-      content: `React tiếp tục là một trong những framework phổ biến nhất trong cộng đồng developer. 
-
-Với những cập nhật mới trong năm 2025, React đã mang đến nhiều tính năng thú vị:
-
-• Server Components mạnh mẽ hơn
-• Performance được cải thiện đáng kể  
-• Developer Experience tốt hơn
-• Integration với AI tools
-
-Hãy cùng khám phá những điều thú vị này!`,
-      author: {
-        name: "Nguyễn Văn A",
-        avatar: "A",
-        username: "@nguyenvana"
-      },
-      image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop",
-      privacy: "public",
-      createdAt: "2025-01-05T10:30:00Z",
-      likes: 42,
-      shares: 12,
-      isLiked: false,
-      tags: ["React", "JavaScript", "WebDev"]
+    const fetchBlog = async () => {
+      try {
+        setLoading(true);
+        const response = await getBlogById(id);
+        setBlog(response.data);
+        setLikeCount(response.data.likes || 0);
+        setComments(response.data.comments || []);
+      } catch (error) {
+        console.error("Error fetching blog:", error);
+        setError("Không thể tải bài viết. Vui lòng thử lại sau.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const mockComments = [
-      {
-        id: 1,
-        author: { name: "Trần Thị B", avatar: "B", username: "@tranthib" },
-        content: "Bài viết rất hay! Cảm ơn bạn đã chia sẻ.",
-        createdAt: "2025-01-05T11:00:00Z",
-        likes: 5
-      },
-      {
-        id: 2,
-        author: { name: "Lê Văn C", avatar: "C", username: "@levanc" },
-        content: "React thực sự đang ngày càng mạnh mẽ. Mình đang học và thấy rất thú vị!",
-        createdAt: "2025-01-05T11:30:00Z",
-        likes: 3
-      }
-    ];
-
-    // Simulate API call
-    setTimeout(() => {
-      setBlog(mockBlog);
-      setComments(mockComments);
-      setLoading(false);
-    }, 1000);
+    if (id) {
+      fetchBlog();
+    }
   }, [id]);
 
-  const handleLike = () => {
-    setBlog(prev => ({
-      ...prev,
-      isLiked: !prev.isLiked,
-      likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1
-    }));
+  const handleBack = () => {
+    navigate(-1);
   };
 
-  const handleComment = (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+  const handleLike = () => {
+    setLiked(!liked);
+    setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+  };
 
-    const comment = {
-      id: Date.now(),
-      author: { name: "Bạn", avatar: "U", username: "@user" },
-      content: newComment,
-      createdAt: new Date().toISOString(),
-      likes: 0
-    };
+  const handleComment = () => {
+    if (comment.trim() && user) {
+      const newComment = {
+        id: Date.now(),
+        author: user.name || user.email,
+        text: comment.trim(),
+        time: "Vừa xong",
+        avatar:
+          user.name?.charAt(0).toUpperCase() ||
+          user.email?.charAt(0).toUpperCase(),
+      };
+      setComments([...comments, newComment]);
+      setComment("");
+    }
+  };
 
-    setComments(prev => [comment, ...prev]);
-    setNewComment('');
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleComment();
+    }
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateString) return "Không rõ thời gian";
+
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInMs = now - date;
+      const diffInSeconds = Math.floor(diffInMs / 1000);
+      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      if (diffInSeconds < 60) return "Vừa xong";
+      if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+      if (diffInHours < 24) return `${diffInHours} giờ trước`;
+      if (diffInDays < 7) return `${diffInDays} ngày trước`;
+
+      return date.toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "Không rõ thời gian";
+    }
+  };
+
+  const renderImages = () => {
+    if (!blog?.images || blog.images.length === 0) return null;
+
+    // Handle both old format (array of strings) and new format (array of objects)
+    const images = blog.images.map((image) => {
+      if (typeof image === "string") {
+        // Old format: just URL string
+        return image.startsWith("http")
+          ? image
+          : `${config.SERVER_URL}${image}`;
+      } else {
+        // New format: object with url property
+        const url = image.url || image;
+        return url.startsWith("http") ? url : `${config.SERVER_URL}${url}`;
+      }
     });
+
+    const displayImages = showAllImages ? images : images.slice(0, 4);
+    const remainingCount = images.length - 4;
+
+    if (images.length === 1) {
+      return (
+        <div className="post-image">
+          <img src={images[0]} alt="Blog image" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="post-images-gallery">
+        {displayImages.map((imageUrl, index) => (
+          <div key={index} className="gallery-image">
+            <img src={imageUrl} alt={`Blog image ${index + 1}`} />
+            {!showAllImages && index === 3 && remainingCount > 0 && (
+              <div
+                className="more-images-overlay"
+                onClick={() => setShowAllImages(true)}
+              >
+                <span>+{remainingCount}</span>
+              </div>
+            )}
+          </div>
+        ))}
+        {showAllImages && images.length > 4 && (
+          <button
+            className="show-less-btn"
+            onClick={() => setShowAllImages(false)}
+          >
+            <i className="fas fa-chevron-up"></i>
+            Ẩn bớt
+          </button>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="blog-detail-loading">
-        <div className="spinner"></div>
-        <p>Đang tải...</p>
+      <div className="blog-detail-page">
+        <div className="blog-detail-container">
+          <div className="blog-detail-loading">
+            <div className="spinner"></div>
+            <p>Đang tải bài viết...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="blog-detail-page">
+        <div className="blog-detail-container">
+          <div className="blog-detail-error">
+            <h3>Có lỗi xảy ra</h3>
+            <p>{error}</p>
+            <button className="back-btn" onClick={handleBack}>
+              Quay lại
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!blog) {
     return (
-      <div className="blog-detail-error">
-        <h2>Không tìm thấy bài viết</h2>
-        <button onClick={() => navigate('/blogs')} className="back-btn">
-          Quay lại danh sách
-        </button>
+      <div className="blog-detail-page">
+        <div className="blog-detail-container">
+          <div className="blog-detail-error">
+            <h3>Không tìm thấy bài viết</h3>
+            <p>Bài viết bạn tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+            <button className="back-btn" onClick={handleBack}>
+              Quay lại
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
+
+  const authorInitial = blog.author_name
+    ? blog.author_name.charAt(0).toUpperCase()
+    : blog.author_email?.charAt(0).toUpperCase() || "?";
+
+  const userInitial = user
+    ? user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()
+    : "U";
 
   return (
     <div className="blog-detail-page">
       <div className="blog-detail-container">
         {/* Header */}
         <div className="blog-detail-header">
-          <button onClick={() => navigate(-1)} className="back-button">
+          <button className="back-button" onClick={handleBack}>
             <i className="fas fa-arrow-left"></i>
-            Quay lại
           </button>
-          <div className="header-actions">
-            <button className="share-btn">
-              <i className="fas fa-share"></i>
-            </button>
-            <button className="more-btn">
-              <i className="fas fa-ellipsis-h"></i>
-            </button>
-          </div>
+          <h2>Bài viết</h2>
+          <button className="more-btn">
+            <i className="fas fa-ellipsis-h"></i>
+          </button>
         </div>
 
-        {/* Blog Content */}
-        <div className="blog-content">
-          {/* Author Info */}
-          <div className="author-section">
-            <div className="author-avatar">
-              {blog.author.avatar}
-            </div>
+        {/* Blog Post */}
+        <div className="blog-post">
+          {/* Post Header */}
+          <div className="post-header">
+            <div className="author-avatar">{authorInitial}</div>
             <div className="author-info">
-              <h3 className="author-name">{blog.author.name}</h3>
-              <p className="author-username">{blog.author.username}</p>
-              <p className="publish-date">{formatDate(blog.createdAt)}</p>
-            </div>
-            <div className="privacy-badge">
-              <i className={`fas ${blog.privacy === 'public' ? 'fa-globe' : blog.privacy === 'friends' ? 'fa-user-friends' : 'fa-lock'}`}></i>
-              {blog.privacy === 'public' ? 'Công khai' : blog.privacy === 'friends' ? 'Bạn bè' : 'Riêng tư'}
-            </div>
-          </div>
-
-          {/* Blog Text Content */}
-          <div className="blog-text">
-            <h1 className="blog-title">{blog.title}</h1>
-            <div className="blog-body">
-              {blog.content.split('\n').map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
+              <h3 className="author-name">
+                {blog.author_name || blog.author_email}
+              </h3>
+              <div className="post-meta">
+                <span>{formatDate(blog.created_at)}</span>
+                <span className="privacy-dot">•</span>
+                <i className="fas fa-globe-americas"></i>
+              </div>
             </div>
           </div>
 
-          {/* Blog Image */}
-          {blog.image && (
-            <div className="blog-image">
-              <img src={blog.image} alt="Blog content" />
+          {/* Post Content */}
+          <div className="post-content">
+            <div className="post-text">
+              <h1>{blog.title}</h1>
+              <div dangerouslySetInnerHTML={{ __html: blog.content }} />
             </div>
-          )}
 
-          {/* Tags */}
-          {blog.tags && blog.tags.length > 0 && (
-            <div className="blog-tags">
-              {blog.tags.map((tag, index) => (
-                <span key={index} className="tag">#{tag}</span>
-              ))}
+            {/* Images */}
+            {renderImages()}
+
+            {/* Tags */}
+            {blog.tags && blog.tags.length > 0 && (
+              <div className="post-tags">
+                {blog.tags.map((tag, index) => (
+                  <span key={index} className="tag">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reaction Summary */}
+          <div className="reaction-summary">
+            <div className="like-reactions">
+              <span className="reaction-icon">👍</span>
+              <span>{likeCount}</span>
             </div>
-          )}
+            <div className="comment-share-count">
+              <span>{comments.length} bình luận</span>
+              <span>0 chia sẻ</span>
+            </div>
+          </div>
 
-          {/* Interaction Bar */}
-          <div className="interaction-bar">
-            <button 
-              className={`interaction-btn like-btn ${blog.isLiked ? 'liked' : ''}`}
+          {/* Action Buttons */}
+          <div className="action-buttons">
+            <button
+              className={`action-btn ${liked ? "liked" : ""}`}
               onClick={handleLike}
             >
-              <i className={`${blog.isLiked ? 'fas' : 'far'} fa-heart`}></i>
-              <span>{blog.likes}</span>
+              <i className={`far ${liked ? "fas" : "far"} fa-thumbs-up`}></i>
+              Thích
             </button>
-            <button className="interaction-btn comment-btn">
+            <button className="action-btn">
               <i className="far fa-comment"></i>
-              <span>{comments.length}</span>
+              Bình luận
             </button>
-            <button className="interaction-btn share-btn">
-              <i className="fas fa-share"></i>
-              <span>{blog.shares}</span>
+            <button className="action-btn">
+              <i className="far fa-share"></i>
+              Chia sẻ
             </button>
           </div>
         </div>
 
         {/* Comments Section */}
         <div className="comments-section">
-          <h3 className="comments-title">
-            Bình luận ({comments.length})
-          </h3>
-
-          {/* Add Comment */}
-          <form onSubmit={handleComment} className="add-comment">
-            <div className="comment-avatar">U</div>
-            <div className="comment-input-wrapper">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Viết bình luận..."
-                className="comment-input"
-                rows="3"
-              />
-              <button type="submit" className="comment-submit" disabled={!newComment.trim()}>
-                <i className="fas fa-paper-plane"></i>
-              </button>
+          {/* Write Comment */}
+          {user && (
+            <div className="write-comment">
+              <div className="comment-avatar">{userInitial}</div>
+              <div className="comment-input-container">
+                <textarea
+                  className="comment-input"
+                  placeholder="Viết bình luận..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  rows="1"
+                />
+                {comment.trim() && (
+                  <button className="send-btn" onClick={handleComment}>
+                    <i className="fas fa-paper-plane"></i>
+                  </button>
+                )}
+              </div>
             </div>
-          </form>
+          )}
 
           {/* Comments List */}
-          <div className="comments-list">
-            {comments.map(comment => (
-              <div key={comment.id} className="comment-item">
-                <div className="comment-avatar">
-                  {comment.author.avatar}
-                </div>
-                <div className="comment-content">
-                  <div className="comment-header">
-                    <span className="comment-author">{comment.author.name}</span>
-                    <span className="comment-username">{comment.author.username}</span>
-                    <span className="comment-date">{formatDate(comment.createdAt)}</span>
+          {comments.length > 0 && (
+            <div className="comments-list">
+              {comments.map((commentItem, index) => (
+                <div key={commentItem.id || index} className="comment-item">
+                  <div className="comment-main">
+                    <div className="comment-avatar">
+                      {commentItem.avatar ||
+                        commentItem.author?.charAt(0).toUpperCase() ||
+                        "U"}
+                    </div>
+                    <div className="comment-bubble">
+                      <div className="comment-header">
+                        <span className="comment-author">
+                          {commentItem.author}
+                        </span>
+                      </div>
+                      <p className="comment-text">{commentItem.text}</p>
+                    </div>
                   </div>
-                  <p className="comment-text">{comment.content}</p>
                   <div className="comment-actions">
-                    <button className="comment-like">
-                      <i className="far fa-heart"></i>
-                      {comment.likes > 0 && <span>{comment.likes}</span>}
+                    <button className="comment-action">
+                      <span className="action-text">Thích</span>
                     </button>
-                    <button className="comment-reply">Trả lời</button>
+                    <button className="comment-action">
+                      <span className="action-text">Phản hồi</span>
+                    </button>
+                    <span className="comment-time">{commentItem.time}</span>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default BlogDetail;

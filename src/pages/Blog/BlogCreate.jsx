@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import * as blogAPI from "../../api/blog";
+import { createBlog, getCategories, uploadImages, deleteUploadedImage } from "../../api/blog";
+import { config } from "../../config";
 import "../../styles/BlogCreate.css";
 
 function CreateBlogPost() {
@@ -39,9 +40,20 @@ function CreateBlogPost() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Kiểm tra có ít nhất nội dung hoặc ảnh
+    // Validation cơ bản
+    if (!title.trim()) {
+      setError("Vui lòng nhập tiêu đề bài viết!");
+      return;
+    }
+
     if (!content.trim() && images.length === 0) {
       setError("Vui lòng nhập nội dung hoặc chọn ảnh để đăng bài!");
+      return;
+    }
+
+    // Kiểm tra độ dài tiêu đề
+    if (title.trim().length > 200) {
+      setError("Tiêu đề không được vượt quá 200 ký tự!");
       return;
     }
 
@@ -64,12 +76,16 @@ function CreateBlogPost() {
         })),
       };
 
-      const response = await blogAPI.createBlog(blogData);
+      const response = await createBlog(blogData);
       console.log("Blog created successfully:", response);
 
-      // Thông báo thành công và chuyển hướng
-      alert("Đăng bài thành công!");
-      navigate("/blogs");
+      // Kiểm tra response và thông báo thành công
+      if (response) {
+        alert("✅ Đăng bài thành công!");
+        navigate("/blogs");
+      } else {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
     } catch (err) {
       console.error("Error creating blog:", err);
       setError(err.message || "Có lỗi xảy ra khi đăng bài!");
@@ -78,30 +94,73 @@ function CreateBlogPost() {
     }
   };
 
-  const handleImageUpload = (files) => {
+  const handleImageUpload = async (files) => {
     const fileArray = Array.from(files);
+    const validFiles = [];
 
-    fileArray.forEach((file, index) => {
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const newImage = {
-            id: Date.now() + index, // Temporary ID
-            file: file,
-            url: e.target.result,
-            caption: "",
-            alt: file.name,
-            size: file.size,
-            type: file.type,
-          };
-          setImages((prev) => [...prev, newImage]);
-        };
-        reader.readAsDataURL(file);
+    // Validate files first
+    for (const file of fileArray) {
+      if (!file.type.startsWith("image/")) {
+        alert(`File ${file.name} không phải là hình ảnh.`);
+        continue;
       }
-    });
+
+      // Kiểm tra kích thước file (max 5MB để phù hợp với server)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`File ${file.name} quá lớn. Vui lòng chọn file nhỏ hơn 5MB.`);
+        continue;
+      }
+
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) {
+      return;
+    }
+
+    // Upload files to server
+    try {
+      setLoading(true);
+      const response = await uploadImages(validFiles);
+      
+      if (response && response.files) {
+        const newImages = response.files.map((fileData, index) => ({
+          id: Date.now() + index,
+          filename: fileData.filename,
+          originalName: fileData.originalName,
+          url: fileData.url, // This will be the server URL like /uploads/blogs/filename.jpg
+          caption: "",
+          alt: fileData.originalName,
+          size: fileData.size,
+          type: fileData.mimetype,
+          isUploaded: true, // Flag to indicate this is uploaded to server
+        }));
+
+        setImages((prev) => [...prev, ...newImages]);
+        console.log("Images uploaded successfully:", newImages);
+      }
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      alert("Có lỗi xảy ra khi upload hình ảnh. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeImage = (imageId) => {
+  const removeImage = async (imageId) => {
+    const imageToRemove = images.find(img => img.id === imageId);
+    
+    // If this is an uploaded image, delete it from server
+    if (imageToRemove && imageToRemove.isUploaded && imageToRemove.filename) {
+      try {
+        await deleteUploadedImage(imageToRemove.filename);
+        console.log("Image deleted from server:", imageToRemove.filename);
+      } catch (error) {
+        console.error("Error deleting image from server:", error);
+        // Continue with local removal even if server deletion fails
+      }
+    }
+
     setImages((prev) => prev.filter((img) => img.id !== imageId));
   };
 
@@ -109,16 +168,6 @@ function CreateBlogPost() {
     setImages((prev) =>
       prev.map((img) => (img.id === imageId ? { ...img, caption } : img))
     );
-  };
-
-  const reorderImages = (dragIndex, hoverIndex) => {
-    setImages((prev) => {
-      const dragItem = prev[dragIndex];
-      const newImages = [...prev];
-      newImages.splice(dragIndex, 1);
-      newImages.splice(hoverIndex, 0, dragItem);
-      return newImages;
-    });
   };
 
   // Drag and drop handlers
@@ -196,7 +245,7 @@ function CreateBlogPost() {
                       <div key={image.id} className="image-item">
                         <div className="image-preview-container">
                           <img
-                            src={image.url}
+                            src={image.url.startsWith('http') ? image.url : `${config.SERVER_URL}${image.url}`}
                             alt={image.alt}
                             className="image-preview"
                           />
@@ -414,7 +463,14 @@ function CreateBlogPost() {
                       : "pointer",
                 }}
               >
-                {loading ? "Đang đăng..." : "Đăng bài"}
+                {loading ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span style={{ marginLeft: "8px" }}>Đang đăng...</span>
+                  </>
+                ) : (
+                  "Đăng bài"
+                )}
               </button>
             </div>
           </div>

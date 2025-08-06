@@ -1,7 +1,13 @@
 import express from "express";
 import cors from "cors";
 import process from "process";
+import path from "path";
+import { fileURLToPath } from "url";
 import { testDatabaseConnection } from "./database.js";
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import auth controller
 import {
@@ -23,7 +29,9 @@ import {
   getMyBlogs,
   toggleLikeBlog,
   getCategories,
-  uploadImage,
+  uploadImages,
+  deleteImage,
+  uploadMiddleware,
 } from "./blogController.js";
 
 const app = express();
@@ -46,6 +54,9 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Serve static files from uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -93,7 +104,13 @@ app.post("/api/blogs/:id/toggle-like", authenticateToken, toggleLikeBlog);
 app.get("/api/categories", getCategories);
 
 // Upload endpoints
-app.post("/api/upload/image", authenticateToken, uploadImage);
+app.post(
+  "/api/upload/images",
+  authenticateToken,
+  uploadMiddleware,
+  uploadImages
+);
+app.delete("/api/upload/image/:filename", authenticateToken, deleteImage);
 
 // Error handling middleware
 app.use((err, req, res) => {
@@ -141,7 +158,9 @@ const startServer = async () => {
 
       console.log("\n🗂️  Other Endpoints:");
       console.log("   GET  /api/categories           - Lấy danh sách category");
-      console.log("   POST /api/upload/image         - Upload hình ảnh");
+      console.log("   POST /api/upload/images        - Upload nhiều hình ảnh");
+      console.log("   DELETE /api/upload/image/:filename - Xóa hình ảnh");
+      console.log("   GET  /uploads/*                - Serve static files");
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);

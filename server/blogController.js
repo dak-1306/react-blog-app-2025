@@ -1,4 +1,59 @@
 import { executeQuery } from "./database.js";
+import multer from "multer";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
+import { validateImageFile, cleanupUnusedImages } from "./imageUtils.js";
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "uploads", "blogs");
+    try {
+      await fs.mkdir(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error);
+    }
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: uuid + original extension
+    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+// File filter for images only
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error("Chỉ chấp nhận file hình ảnh (jpeg, jpg, png, gif, webp)"));
+  }
+};
+
+// Configure multer
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: fileFilter,
+});
+
+// Export multer middleware for use in routes
+export const uploadMiddleware = upload.array("images", 10); // Allow up to 10 images
 
 // GET /api/blogs - Lấy danh sách blog với phân trang và tìm kiếm
 export const getBlogs = async (req, res) => {
@@ -416,20 +471,60 @@ export const getCategories = async (req, res) => {
   }
 };
 
-// POST /api/upload/image - Upload image (placeholder)
-export const uploadImage = async (req, res) => {
+// POST /api/upload/images - Upload multiple images
+export const uploadImages = async (req, res) => {
   try {
-    // This is a placeholder - you'll need to implement actual file upload
-    // using multer or similar library for handling multipart/form-data
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        error: "Không có file nào được upload",
+      });
+    }
 
-    res.status(501).json({
-      error:
-        "Upload image chưa được implement. Vui lòng sử dụng URL trực tiếp.",
+    const uploadedFiles = req.files.map((file) => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      url: `/uploads/blogs/${file.filename}`,
+      size: file.size,
+      mimetype: file.mimetype,
+    }));
+
+    res.json({
+      message: "Upload thành công",
+      files: uploadedFiles,
     });
   } catch (error) {
-    console.error("Upload image error:", error);
+    console.error("Upload images error:", error);
     res.status(500).json({
       error: "Upload hình ảnh thất bại",
+      message: error.message,
+    });
+  }
+};
+
+// DELETE /api/upload/image/:filename - Delete uploaded image
+export const deleteImage = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, "uploads", "blogs", filename);
+
+    try {
+      await fs.unlink(filePath);
+      res.json({
+        message: "Xóa file thành công",
+      });
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        return res.status(404).json({
+          error: "File không tồn tại",
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("Delete image error:", error);
+    res.status(500).json({
+      error: "Xóa hình ảnh thất bại",
+      message: error.message,
     });
   }
 };

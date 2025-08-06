@@ -2,17 +2,28 @@ import axiosInstance from "./axiosInstance";
 
 // API lấy danh sách blog với phân trang và tìm kiếm
 export const getBlogs = async (params = {}) => {
-  const { page = 1, limit = 10, search = "", category = "" } = params;
-  const response = await axiosInstance.get("/blogs", {
-    params: { page, limit, search, category },
-  });
-  return response;
+  try {
+    const { page = 1, limit = 10, search = "", category = "" } = params;
+    const response = await axiosInstance.get("/blogs", {
+      params: { page, limit, search, category },
+    });
+    // axiosInstance đã return response.data rồi, nên return trực tiếp
+    return response;
+  } catch (error) {
+    console.error("Error fetching blogs:", error);
+    throw error;
+  }
 };
 
 // API lấy chi tiết blog
 export const getBlogById = async (id) => {
-  const response = await axiosInstance.get(`/blogs/${id}`);
-  return response;
+  try {
+    const response = await axiosInstance.get(`/blogs/${id}`);
+    return response;
+  } catch (error) {
+    console.error("Error fetching blog by ID:", error);
+    throw error;
+  }
 };
 
 // API tạo blog mới
@@ -33,17 +44,37 @@ export const deleteBlog = async (id) => {
   return response;
 };
 
-// API upload hình ảnh
-export const uploadImage = async (file) => {
-  const formData = new FormData();
-  formData.append("image", file);
+// API upload nhiều hình ảnh
+export const uploadImages = async (files) => {
+  try {
+    const formData = new FormData();
 
-  const response = await axiosInstance.post("/upload/image", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response;
+    // Add multiple files to FormData
+    Array.from(files).forEach((file) => {
+      formData.append("images", file);
+    });
+
+    const response = await axiosInstance.post("/upload/images", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("Error uploading images:", error);
+    throw error;
+  }
+};
+
+// API xóa hình ảnh đã upload
+export const deleteUploadedImage = async (filename) => {
+  try {
+    const response = await axiosInstance.delete(`/upload/image/${filename}`);
+    return response;
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    throw error;
+  }
 };
 
 // API lấy blog của user hiện tại
