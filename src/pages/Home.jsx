@@ -23,9 +23,12 @@ export default function Home() {
     try {
       setLoading(true);
       const response = await getBlogs({ limit: 6 });
-      setBlogs(response.data || []);
+      console.log("🏠 Home - Latest blogs response:", response);
+      // axiosInstance trả về response.data, và trong đó có blogs array
+      setBlogs(response.blogs || []);
     } catch (error) {
       console.error("Error fetching blogs:", error);
+      setBlogs([]); // Fallback to empty array
     } finally {
       setLoading(false);
     }
@@ -39,9 +42,11 @@ export default function Home() {
       setLoading(true);
       setSearchPerformed(true);
       const response = await getBlogs({ search: searchQuery, limit: 10 });
-      setBlogs(response.data || []);
+      console.log("🔍 Home - Search response:", response);
+      setBlogs(response.blogs || []);
     } catch (error) {
       console.error("Error searching blogs:", error);
+      setBlogs([]);
     } finally {
       setLoading(false);
     }
@@ -138,9 +143,21 @@ export default function Home() {
                     className="blog-card"
                     onClick={() => handleBlogClick(blog.id)}
                   >
-                    {blog.image && (
+                    {blog.featured_image && (
                       <div className="blog-card__image">
-                        <img src={blog.image} alt={blog.title} />
+                        <img
+                          src={
+                            blog.featured_image.startsWith("http")
+                              ? blog.featured_image
+                              : blog.featured_image.startsWith("data:")
+                              ? blog.featured_image
+                              : `http://localhost:3000${blog.featured_image}`
+                          }
+                          alt={blog.title}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
                       </div>
                     )}
                     <div className="blog-card__content">
@@ -150,15 +167,15 @@ export default function Home() {
                       </p>
                       <div className="blog-card__meta">
                         <span className="blog-card__author">
-                          {blog.author?.name}
+                          {blog.author_name || "Unknown"}
                         </span>
                         <span className="blog-card__date">
-                          {formatRelativeTime(blog.createdAt)}
+                          {formatRelativeTime(blog.created_at)}
                         </span>
                       </div>
-                      {blog.category && (
+                      {blog.category_name && (
                         <span className="blog-card__category">
-                          {blog.category}
+                          {blog.category_name}
                         </span>
                       )}
                     </div>

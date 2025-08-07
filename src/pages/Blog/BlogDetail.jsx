@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getBlogById } from "../../api/blog";
+import { getBlogById, toggleLikeBlog } from "../../api/blog";
 import { useAuth } from "../../hooks/useAuth";
 import { config } from "../../config";
 import "../../styles/BlogDetail.css";
@@ -23,9 +23,11 @@ const BlogDetail = () => {
       try {
         setLoading(true);
         const response = await getBlogById(id);
-        setBlog(response.data);
-        setLikeCount(response.data.likes || 0);
-        setComments(response.data.comments || []);
+        console.log("📖 Blog detail response:", response);
+        setBlog(response);
+        setLikeCount(response.likes_count || 0);
+        // Comments sẽ được load riêng từ API comments trong tương lai
+        setComments([]);
       } catch (error) {
         console.error("Error fetching blog:", error);
         setError("Không thể tải bài viết. Vui lòng thử lại sau.");
@@ -43,9 +45,20 @@ const BlogDetail = () => {
     navigate(-1);
   };
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+  const handleLike = async () => {
+    if (!user) {
+      alert("Bạn cần đăng nhập để thích bài viết");
+      return;
+    }
+
+    try {
+      await toggleLikeBlog(id);
+      setLiked(!liked);
+      setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      alert("Có lỗi xảy ra khi thích bài viết");
+    }
   };
 
   const handleComment = () => {
@@ -110,7 +123,7 @@ const BlogDetail = () => {
           : `${config.SERVER_URL}${image}`;
       } else {
         // New format: object with url property
-        const url = image.url || image;
+        const url = image.image_url || image.url || image;
         return url.startsWith("http") ? url : `${config.SERVER_URL}${url}`;
       }
     });

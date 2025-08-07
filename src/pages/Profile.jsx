@@ -9,8 +9,16 @@ import {
   uploadAvatar,
   deleteAccount,
 } from "../api/profile";
-import { config } from "../config";
 import "../styles/Profile.css";
+
+// Import Profile components
+import ProfileHeader from "./Profile/ProfileHeader";
+import ProfileTabs from "./Profile/ProfileTabs";
+import ProfileInfo from "./Profile/ProfileInfo";
+import ChangePassword from "./Profile/ChangePassword";
+import MyBlogs from "./Profile/MyBlogs";
+import Settings from "./Profile/Settings";
+import DeleteModal from "./Profile/DeleteModal";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -31,20 +39,12 @@ export default function Profile() {
     avatar: "",
   });
 
-  // Password change state
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
   // User's blogs state
   const [userBlogs, setUserBlogs] = useState([]);
   const [blogsLoading, setBlogsLoading] = useState(false);
 
   // Delete account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
 
   // Check authentication
   useEffect(() => {
@@ -121,13 +121,13 @@ export default function Profile() {
   }, [error, success]);
 
   // Handle profile update
-  const handleProfileUpdate = async (e) => {
-    e.preventDefault();
+  const handleProfileUpdate = async (updatedProfile) => {
     try {
       setLoading(true);
       setError(null);
 
-      await updateUserProfile(profile);
+      await updateUserProfile(updatedProfile);
+      setProfile(updatedProfile);
       setSuccess("Cập nhật profile thành công!");
     } catch (err) {
       setError(err.response?.data?.message || "Cập nhật profile thất bại");
@@ -137,9 +137,7 @@ export default function Profile() {
   };
 
   // Handle password change
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-
+  const handlePasswordChange = async (passwordData) => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError("Mật khẩu xác nhận không khớp");
       return;
@@ -160,11 +158,6 @@ export default function Profile() {
       });
 
       setSuccess("Đổi mật khẩu thành công!");
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
     } catch (err) {
       setError(err.response?.data?.message || "Đổi mật khẩu thất bại");
     } finally {
@@ -173,21 +166,7 @@ export default function Profile() {
   };
 
   // Handle avatar upload
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Validate file
-    if (!file.type.startsWith("image/")) {
-      setError("Vui lòng chọn file hình ảnh");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      setError("File ảnh không được vượt quá 2MB");
-      return;
-    }
-
+  const handleAvatarUpload = async (file) => {
     try {
       setLoading(true);
       setError(null);
@@ -207,12 +186,7 @@ export default function Profile() {
   };
 
   // Handle delete account
-  const handleDeleteAccount = async () => {
-    if (!deletePassword) {
-      setError("Vui lòng nhập mật khẩu để xác nhận");
-      return;
-    }
-
+  const handleDeleteAccount = async (deletePassword) => {
     try {
       setLoading(true);
       setError(null);
@@ -229,13 +203,14 @@ export default function Profile() {
     } finally {
       setLoading(false);
       setShowDeleteModal(false);
-      setDeletePassword("");
     }
   };
 
-  // Format date
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("vi-VN");
+  // Handle export data
+  const handleExportData = () => {
+    // Implementation for exporting user data
+    console.log("Exporting user data...");
+    // This would typically generate a download link for user data
   };
 
   if (loading && !profile.name) {
@@ -252,42 +227,11 @@ export default function Profile() {
   return (
     <div className="profile-container">
       {/* Profile Header */}
-      <div className="profile-header">
-        <div className="profile-cover">
-          <div className="profile-avatar-section">
-            <div className="profile-avatar">
-              <img
-                src={
-                  profile.avatar
-                    ? profile.avatar.startsWith("http")
-                      ? profile.avatar
-                      : `${config.SERVER_URL}${profile.avatar}`
-                    : "/default-avatar.png"
-                }
-                alt={profile.name}
-                onError={(e) => {
-                  e.target.src = "/default-avatar.png";
-                }}
-              />
-              <label htmlFor="avatar-upload" className="avatar-upload-btn">
-                <i className="fas fa-camera"></i>
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                style={{ display: "none" }}
-              />
-            </div>
-            <div className="profile-info">
-              <h1>{profile.name || "Người dùng"}</h1>
-              <p className="profile-email">{profile.email}</p>
-              {profile.bio && <p className="profile-bio">{profile.bio}</p>}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProfileHeader
+        userInfo={profile}
+        onAvatarUpload={handleAvatarUpload}
+        loading={loading}
+      />
 
       {/* Messages */}
       {error && (
@@ -305,381 +249,48 @@ export default function Profile() {
       )}
 
       {/* Profile Tabs */}
-      <div className="profile-tabs">
-        <button
-          className={`tab-btn ${activeTab === "info" ? "active" : ""}`}
-          onClick={() => setActiveTab("info")}
-        >
-          <i className="fas fa-user"></i>
-          Thông tin cá nhân
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "password" ? "active" : ""}`}
-          onClick={() => setActiveTab("password")}
-        >
-          <i className="fas fa-lock"></i>
-          Đổi mật khẩu
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "blogs" ? "active" : ""}`}
-          onClick={() => setActiveTab("blogs")}
-        >
-          <i className="fas fa-edit"></i>
-          Bài viết của tôi
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
-          onClick={() => setActiveTab("settings")}
-        >
-          <i className="fas fa-cog"></i>
-          Cài đặt
-        </button>
-      </div>
+      <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab Content */}
       <div className="profile-content">
-        {/* Profile Info Tab */}
         {activeTab === "info" && (
-          <div className="tab-content">
-            <h2>Thông tin cá nhân</h2>
-            <form onSubmit={handleProfileUpdate} className="profile-form">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Tên hiển thị *</label>
-                  <input
-                    type="text"
-                    value={profile.name}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Email *</label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Số điện thoại</label>
-                  <input
-                    type="tel"
-                    value={profile.phone}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Địa chỉ</label>
-                  <input
-                    type="text"
-                    value={profile.location}
-                    onChange={(e) =>
-                      setProfile((prev) => ({
-                        ...prev,
-                        location: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Website</label>
-                  <input
-                    type="url"
-                    value={profile.website}
-                    onChange={(e) =>
-                      setProfile((prev) => ({
-                        ...prev,
-                        website: e.target.value,
-                      }))
-                    }
-                    placeholder="https://example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Giới thiệu bản thân</label>
-                <textarea
-                  value={profile.bio}
-                  onChange={(e) =>
-                    setProfile((prev) => ({ ...prev, bio: e.target.value }))
-                  }
-                  placeholder="Viết vài dòng về bản thân..."
-                  rows="4"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    Đang cập nhật...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-save"></i>
-                    Lưu thay đổi
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+          <ProfileInfo
+            profile={profile}
+            onProfileUpdate={handleProfileUpdate}
+            loading={loading}
+          />
         )}
 
-        {/* Password Change Tab */}
         {activeTab === "password" && (
-          <div className="tab-content">
-            <h2>Đổi mật khẩu</h2>
-            <form onSubmit={handlePasswordChange} className="password-form">
-              <div className="form-group">
-                <label>Mật khẩu hiện tại *</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) =>
-                    setPasswordData((prev) => ({
-                      ...prev,
-                      currentPassword: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Mật khẩu mới *</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) =>
-                    setPasswordData((prev) => ({
-                      ...prev,
-                      newPassword: e.target.value,
-                    }))
-                  }
-                  required
-                  minLength="6"
-                />
-                <small>Mật khẩu phải có ít nhất 6 ký tự</small>
-              </div>
-
-              <div className="form-group">
-                <label>Xác nhận mật khẩu mới *</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) =>
-                    setPasswordData((prev) => ({
-                      ...prev,
-                      confirmPassword: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    Đang đổi mật khẩu...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-key"></i>
-                    Đổi mật khẩu
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+          <ChangePassword
+            onPasswordChange={handlePasswordChange}
+            loading={loading}
+          />
         )}
 
-        {/* User Blogs Tab */}
         {activeTab === "blogs" && (
-          <div className="tab-content">
-            <div className="blogs-header">
-              <h2>Bài viết của tôi</h2>
-              <button
-                className="btn btn-primary"
-                onClick={() => navigate("/blogs/create")}
-              >
-                <i className="fas fa-plus"></i>
-                Viết bài mới
-              </button>
-            </div>
-
-            {blogsLoading ? (
-              <div className="loading-spinner">
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>Đang tải bài viết...</p>
-              </div>
-            ) : userBlogs.length > 0 ? (
-              <div className="user-blogs-list">
-                {userBlogs.map((blog) => (
-                  <div key={blog.id} className="blog-item">
-                    <div className="blog-info">
-                      <h3
-                        onClick={() => navigate(`/blogs/${blog.id}`)}
-                        className="blog-title"
-                      >
-                        {blog.title}
-                      </h3>
-                      <p className="blog-excerpt">{blog.excerpt}</p>
-                      <div className="blog-meta">
-                        <span className="blog-date">
-                          <i className="fas fa-calendar"></i>
-                          {formatDate(blog.created_at)}
-                        </span>
-                        <span className={`blog-status status-${blog.status}`}>
-                          {blog.status === "published" && "Đã xuất bản"}
-                          {blog.status === "draft" && "Bản nháp"}
-                          {blog.status === "private" && "Riêng tư"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="blog-actions">
-                      <button
-                        onClick={() => navigate(`/blogs/${blog.id}`)}
-                        className="btn btn-sm btn-outline"
-                      >
-                        <i className="fas fa-eye"></i>
-                        Xem
-                      </button>
-                      <button
-                        onClick={() => navigate(`/blogs/${blog.id}/edit`)}
-                        className="btn btn-sm btn-outline"
-                      >
-                        <i className="fas fa-edit"></i>
-                        Sửa
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-blogs">
-                <i className="fas fa-edit"></i>
-                <h3>Chưa có bài viết nào</h3>
-                <p>Hãy viết bài đầu tiên của bạn!</p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => navigate("/blogs/create")}
-                >
-                  <i className="fas fa-plus"></i>
-                  Viết bài mới
-                </button>
-              </div>
-            )}
-          </div>
+          <MyBlogs
+            blogs={userBlogs}
+            loading={blogsLoading}
+            onNavigate={navigate}
+          />
         )}
 
-        {/* Settings Tab */}
         {activeTab === "settings" && (
-          <div className="tab-content">
-            <h2>Cài đặt tài khoản</h2>
-
-            <div className="settings-section">
-              <div className="danger-zone">
-                <h3>Vùng nguy hiểm</h3>
-                <p>
-                  Các hành động này không thể hoàn tác. Hãy cân nhắc kỹ trước
-                  khi thực hiện.
-                </p>
-
-                <button
-                  className="btn btn-danger"
-                  onClick={() => setShowDeleteModal(true)}
-                >
-                  <i className="fas fa-trash"></i>
-                  Xóa tài khoản
-                </button>
-              </div>
-            </div>
-          </div>
+          <Settings
+            onShowDeleteModal={() => setShowDeleteModal(true)}
+            onExportData={handleExportData}
+          />
         )}
       </div>
 
       {/* Delete Account Modal */}
-      {showDeleteModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Xác nhận xóa tài khoản</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>
-                <strong>Cảnh báo:</strong> Hành động này sẽ xóa vĩnh viễn tài
-                khoản của bạn và tất cả dữ liệu liên quan. Điều này không thể
-                hoàn tác.
-              </p>
-              <div className="form-group">
-                <label>Nhập mật khẩu để xác nhận:</label>
-                <input
-                  type="password"
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  placeholder="Mật khẩu của bạn"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeletePassword("");
-                }}
-              >
-                Hủy
-              </button>
-              <button
-                className="btn btn-danger"
-                onClick={handleDeleteAccount}
-                disabled={loading || !deletePassword}
-              >
-                {loading ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    Đang xóa...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-trash"></i>
-                    Xóa tài khoản
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onDeleteAccount={handleDeleteAccount}
+        userInfo={profile}
+      />
     </div>
   );
 }
