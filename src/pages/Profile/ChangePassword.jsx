@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 
-export default function ChangePassword({
-  onPasswordChange,
-  loading,
-}) {
+export default function ChangePassword({ onPasswordChange, loading }) {
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -17,9 +14,9 @@ export default function ChangePassword({
   });
 
   const handleInputChange = (field, value) => {
-    setPasswordData(prev => ({
+    setPasswordData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 

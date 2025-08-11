@@ -108,6 +108,7 @@
   border: 2px solid #e9ecef;
   border-radius: 8px;
   transition: all 0.3s ease;
+  margin: 0 auto;
 }
 
 .privacy-option label:hover {
@@ -241,6 +242,9 @@
   padding: 25px;
   background: #fff5f5;
   margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .danger-zone h3 {

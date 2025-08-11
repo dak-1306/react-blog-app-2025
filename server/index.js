@@ -36,6 +36,8 @@ import {
   deleteImage,
   uploadMiddleware,
   avatarUploadMiddleware,
+  getCommentsByBlogId,
+  createComment,
 } from "./blogController.js";
 
 const app = express();
@@ -126,6 +128,9 @@ app.get("/api/blogs/test", authenticateToken, (req, res) => {
 // Specific routes MUST come before parameterized routes
 app.get("/api/blogs/my-blogs", authenticateToken, getMyBlogs);
 app.get("/api/blogs/:id", getBlogById);
+// Comment endpoints
+app.get("/api/blogs/:id/comments", getCommentsByBlogId);
+app.post("/api/blogs/:id/comments", authenticateToken, createComment);
 app.post("/api/blogs", authenticateToken, createBlog);
 app.put("/api/blogs/:id", authenticateToken, updateBlog);
 app.delete("/api/blogs/:id", authenticateToken, deleteBlog);
@@ -144,7 +149,7 @@ app.post(
 app.delete("/api/upload/image/:filename", authenticateToken, deleteImage);
 
 // Error handling middleware
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({
     error: "Internal server error",

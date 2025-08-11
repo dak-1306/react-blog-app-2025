@@ -1,3 +1,27 @@
+// API lấy danh sách comment cho blog
+export const getCommentsByBlogId = async (blogId) => {
+  try {
+    const response = await axiosInstance.get(`/blogs/${blogId}/comments`);
+    return response;
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    throw error;
+  }
+};
+
+// API tạo comment mới cho blog
+export const createComment = async (blogId, commentData) => {
+  try {
+    const response = await axiosInstance.post(
+      `/blogs/${blogId}/comments`,
+      commentData
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating comment:", error);
+    throw error;
+  }
+};
 import axiosInstance from "./axiosInstance";
 
 // API lấy danh sách blog với phân trang và tìm kiếm

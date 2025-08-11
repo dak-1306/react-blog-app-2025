@@ -382,6 +382,9 @@
 .action-btn.liked {
   color: #1877f2;
 }
+.action-btn.liked i {
+  color: #1877f2 !important;
+}
 
 /* Comments Section - FB Style */
 .comments-section {

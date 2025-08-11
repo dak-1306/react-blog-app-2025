@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export default function ProfileInfo({
-  profile,
-  onProfileUpdate,
-  loading,
-}) {
+export default function ProfileInfo({ profile, onProfileUpdate, loading }) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,9 +25,9 @@ export default function ProfileInfo({
   }, [profile]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 

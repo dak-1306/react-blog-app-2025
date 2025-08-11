@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getBlogById, toggleLikeBlog } from "../../api/blog";
+import {
+  getBlogById,
+  toggleLikeBlog,
+  getCommentsByBlogId,
+  createComment,
+} from "../../api/blog";
 import { useAuth } from "../../hooks/useAuth";
 import { config } from "../../config";
 import "../../styles/BlogDetail.css";
@@ -19,25 +24,27 @@ const BlogDetail = () => {
   const [comments, setComments] = useState([]);
 
   useEffect(() => {
-    const fetchBlog = async () => {
+    const fetchBlogAndComments = async () => {
       try {
         setLoading(true);
         const response = await getBlogById(id);
-        console.log("📖 Blog detail response:", response);
         setBlog(response);
         setLikeCount(response.likes_count || 0);
-        // Comments sẽ được load riêng từ API comments trong tương lai
-        setComments([]);
+        setLiked(!!response.liked_by_user); // đồng bộ trạng thái like
+        // Fetch comments from API
+        const commentsRes = await getCommentsByBlogId(id);
+        setComments(commentsRes || []);
       } catch (error) {
-        console.error("Error fetching blog:", error);
-        setError("Không thể tải bài viết. Vui lòng thử lại sau.");
+        console.error("Error fetching blog or comments:", error);
+        setError(
+          "Không thể tải bài viết hoặc bình luận. Vui lòng thử lại sau."
+        );
       } finally {
         setLoading(false);
       }
     };
-
     if (id) {
-      fetchBlog();
+      fetchBlogAndComments();
     }
   }, [id]);
 
@@ -50,30 +57,27 @@ const BlogDetail = () => {
       alert("Bạn cần đăng nhập để thích bài viết");
       return;
     }
-
     try {
       await toggleLikeBlog(id);
-      setLiked(!liked);
-      setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+      // Sau khi like/unlike, fetch lại blog để đồng bộ likeCount và liked
+      const response = await getBlogById(id);
+      setLikeCount(response.likes_count || 0);
+      setLiked(!!response.liked_by_user);
     } catch (error) {
       console.error("Error toggling like:", error);
       alert("Có lỗi xảy ra khi thích bài viết");
     }
   };
 
-  const handleComment = () => {
+  const handleComment = async () => {
     if (comment.trim() && user) {
-      const newComment = {
-        id: Date.now(),
-        author: user.name || user.email,
-        text: comment.trim(),
-        time: "Vừa xong",
-        avatar:
-          user.name?.charAt(0).toUpperCase() ||
-          user.email?.charAt(0).toUpperCase(),
-      };
-      setComments([...comments, newComment]);
-      setComment("");
+      try {
+        const newComment = await createComment(id, { content: comment.trim() });
+        setComments([...comments, newComment]);
+        setComment("");
+      } catch (error) {
+        alert("Không thể gửi bình luận. Vui lòng thử lại.");
+      }
     }
   };
 
@@ -216,9 +220,37 @@ const BlogDetail = () => {
     ? blog.author_name.charAt(0).toUpperCase()
     : blog.author_email?.charAt(0).toUpperCase() || "?";
 
-  const userInitial = user
-    ? user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()
-    : "U";
+  // Hàm tái sử dụng: trả về <img> nếu có avatar, nếu không trả về ký tự đầu tên/email
+  const getUserAvatarOrInitial = (userObj, size = 32) => {
+    // Ưu tiên author_avatar (dùng cho comment), sau đó đến avatar (user)
+    const avatarUrl = userObj?.author_avatar || userObj?.avatar;
+    if (avatarUrl) {
+      const src = avatarUrl.startsWith("http")
+        ? avatarUrl
+        : `${config.SERVER_URL}${avatarUrl}`;
+      return (
+        <img
+          src={src}
+          alt="avatar"
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            objectFit: "cover",
+          }}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/default-avatar.png";
+          }}
+        />
+      );
+    }
+    if (userObj && userObj.name && userObj.name.length > 0)
+      return userObj.name.charAt(0).toUpperCase();
+    if (userObj && userObj.email && userObj.email.length > 0)
+      return userObj.email.charAt(0).toUpperCase();
+    return "U";
+  };
 
   return (
     <div className="blog-detail-page">
@@ -238,7 +270,39 @@ const BlogDetail = () => {
         <div className="blog-post">
           {/* Post Header */}
           <div className="post-header">
-            <div className="author-avatar">{authorInitial}</div>
+            <div className="author-avatar">
+              {blog.author_avatar ? (
+                <img
+                  src={
+                    blog.author_avatar.startsWith("http")
+                      ? blog.author_avatar
+                      : `${config.SERVER_URL}${blog.author_avatar}`
+                  }
+                  alt={blog.author_name || "avatar"}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/default-avatar.png";
+                  }}
+                />
+              ) : (
+                <img
+                  src="/default-avatar.png"
+                  alt="default avatar"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              )}
+            </div>
             <div className="author-info">
               <h3 className="author-name">
                 {blog.author_name || blog.author_email}
@@ -310,7 +374,9 @@ const BlogDetail = () => {
           {/* Write Comment */}
           {user && (
             <div className="write-comment">
-              <div className="comment-avatar">{userInitial}</div>
+              <div className="comment-avatar">
+                {getUserAvatarOrInitial(user, 32)}
+              </div>
               <div className="comment-input-container">
                 <textarea
                   className="comment-input"
@@ -336,17 +402,15 @@ const BlogDetail = () => {
                 <div key={commentItem.id || index} className="comment-item">
                   <div className="comment-main">
                     <div className="comment-avatar">
-                      {commentItem.avatar ||
-                        commentItem.author?.charAt(0).toUpperCase() ||
-                        "U"}
+                      {getUserAvatarOrInitial(commentItem, 32)}
                     </div>
                     <div className="comment-bubble">
                       <div className="comment-header">
                         <span className="comment-author">
-                          {commentItem.author}
+                          {commentItem.author_name || "Ẩn danh"}
                         </span>
                       </div>
-                      <p className="comment-text">{commentItem.text}</p>
+                      <p className="comment-text">{commentItem.content}</p>
                     </div>
                   </div>
                   <div className="comment-actions">
@@ -356,7 +420,9 @@ const BlogDetail = () => {
                     <button className="comment-action">
                       <span className="action-text">Phản hồi</span>
                     </button>
-                    <span className="comment-time">{commentItem.time}</span>
+                    <span className="comment-time">
+                      {formatDate(commentItem.created_at)}
+                    </span>
                   </div>
                 </div>
               ))}

@@ -141,7 +141,25 @@ export default function BlogList() {
                 {/* Post Header */}
                 <div className="post-header">
                   <div className="author-avatar">
-                    {blog.author_name?.charAt(0) || "U"}
+                    <img
+                      src={
+                        blog.author_avatar
+                          ? blog.author_avatar.startsWith("http")
+                            ? blog.author_avatar
+                            : `${config.SERVER_URL}${blog.author_avatar}`
+                          : "/default-avatar.png"
+                      }
+                      alt={blog.author_name || "avatar"}
+                      onError={(e) => {
+                        e.target.src = "/default-avatar.png";
+                      }}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                    />
                   </div>
                   <div className="author-info">
                     <div className="author-name">

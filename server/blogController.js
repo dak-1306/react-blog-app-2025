@@ -1,3 +1,58 @@
+// GET /api/blogs/:id/comments - Lấy danh sách comment cho blog
+export const getCommentsByBlogId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("[getCommentsByBlogId] id:", id);
+    const comments = await executeQuery(
+      `SELECT c.id, c.content, c.created_at, u.name as author_name, u.avatar as author_avatar
+       FROM comments c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.blog_id = ?
+       ORDER BY c.created_at ASC`,
+      [id]
+    );
+    console.log("[getCommentsByBlogId] comments:", comments);
+    res.json(comments);
+  } catch (error) {
+    console.error("Get comments error:", error);
+    res
+      .status(500)
+      .json({
+        error: "Lấy danh sách bình luận thất bại",
+        message: error.message,
+      });
+  }
+};
+
+// POST /api/blogs/:id/comments - Tạo comment mới cho blog
+export const createComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    const user_id = req.user.id;
+    if (!content || !content.trim()) {
+      return res
+        .status(400)
+        .json({ error: "Nội dung bình luận không được để trống" });
+    }
+    const result = await executeQuery(
+      `INSERT INTO comments (blog_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())`,
+      [id, user_id, content.trim()]
+    );
+    // Lấy thông tin comment vừa tạo
+    const [comment] = await executeQuery(
+      `SELECT c.id, c.content, c.created_at, u.name as author_name, u.avatar as author_avatar
+       FROM comments c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.id = ?`,
+      [result.insertId]
+    );
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error("Create comment error:", error);
+    res.status(500).json({ error: "Tạo bình luận thất bại" });
+  }
+};
 import { executeQuery } from "./database.js";
 import multer from "multer";
 import path from "path";
