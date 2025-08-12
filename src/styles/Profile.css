@@ -1,0 +1,8 @@
+/* Profile Main CSS - Imports all profile related styles */
+
+/* Import all profile component styles */
+@import "./profile/common.css";
+@import "./profile/infor.css";
+@import "./profile/changePassWord.css";
+@import "./profile/myBlog.css";
+@import "./profile/setting.css";
