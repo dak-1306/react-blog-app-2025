@@ -3,11 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import Button from "../ui/Button";
 import "./Header.css";
-
+import { config } from "../../config";
 const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -16,7 +15,7 @@ const Header = () => {
       console.error("Logout error:", error);
     }
   };
-
+  console.log("USER:", user);
   return (
     <header className="header">
       <div className="header__container">
@@ -41,8 +40,36 @@ const Header = () => {
         <div className="header__actions">
           {user ? (
             <div className="header__user">
-              <Link to="/profile" className="header__user-name">
-                Xin chào, {user.name}
+              <Link
+                to="/profile"
+                className="header__user-name"
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                <img
+                  src={
+                    user.avatar
+                      ? user.avatar.startsWith("http")
+                        ? user.avatar
+                        : `${config.SERVER_URL.replace(
+                            /\/$/,
+                            ""
+                          )}/${user.avatar.replace(/^\//, "")}`
+                      : "/default-avatar.png"
+                  }
+                  alt={user.name || "avatar"}
+                  onError={(e) => {
+                    e.target.src = "/default-avatar.png";
+                  }}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    marginRight: 8,
+                    background: "#eee",
+                  }}
+                />
+                Xin chào, {user.name || "Người dùng"}
               </Link>
               <Button variant="outline" size="small" onClick={handleLogout}>
                 Đăng xuất
