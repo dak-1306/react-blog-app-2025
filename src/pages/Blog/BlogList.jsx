@@ -22,6 +22,7 @@ export default function BlogList() {
     }
     setOpenMenuId(null);
   };
+
   // Fetch blogs từ API
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -295,7 +296,7 @@ export default function BlogList() {
                         >
                           <i className="fas fa-eye"></i> Xem ảnh
                         </button>
-                        f
+                        f =
                       </div>
                     </div>
                   ) : null}

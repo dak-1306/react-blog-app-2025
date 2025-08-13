@@ -31,8 +31,6 @@ const AppRouter = () => {
 
           return <Route key={index} path={path} element={ProtectedElement} />;
         })}
-
-        {/* 404 Page */}
         <Route path="/blogs/:id/edit" element={<BlogEdit />} />
       </Routes>
     </BrowserRouter>

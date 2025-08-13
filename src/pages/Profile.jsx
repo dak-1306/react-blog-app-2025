@@ -67,6 +67,7 @@ export default function Profile() {
           bio: userData.bio || "",
           location: userData.location || "",
           website: userData.website || "",
+
           avatar:
             userData.avatar && userData.avatar.trim() !== ""
               ? userData.avatar
